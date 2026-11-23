@@ -10,12 +10,12 @@
 // gcc main.c crunch.c sb_noise.c cubiomes/libcubiomes.a -O3 -pthread -lm -fwrapv -o test
 
 #define MAX_MATCHES 10000
-#define REPORT_INTERVAL UINT64_C(1000000)
-#define SEED_START UINT64_C(0)
-#define SEED_LIMIT UINT64_C(18446744073709551615)
-#define MIN_SIZE 20000
-#define THREADS 20
-enum { THREAD_COUNT = 20 };
+#define REPORT_INTERVAL UINT64_C(100000000)
+#define SEED_START UINT64_C(6767676767677676)
+#define SEED_LIMIT UINT64_C(10000000000000000)
+#define MIN_SIZE 30000
+#define THREADS 8
+enum { THREAD_COUNT = 8 };
 time_t start;
 typedef struct {
     atomic_uint_fast64_t checked;
@@ -65,18 +65,18 @@ int pass_seed(uint64_t seed, sbNoise* noise) {
     sb_setseed(noise, seed);
     // float crunchiness(sbNoise *noise, int type, int octave_index, char half_octave);
     float p = crunchiness(noise, NP_TEMPERATURE, 0, 'A');
-    if (p > 0.4) {
+    if (p > 0.25) {
         return 0;
     } 
     float q = crunchiness(noise, NP_TEMPERATURE, 0, 'B');
-    if (p + q > 0.4) {
+    if (p + q > 0.25) {
         return 0;
     }
     if (p + q + crunchiness(noise, NP_TEMPERATURE, 1, 'A') + crunchiness(noise, NP_TEMPERATURE, 1, 'B') > 0.2) {
         return 0;
     }
     int A_size = floodfill(noise, good_A, 0, 0, 256, 512);
-    if (A_size < 340) {
+    if (A_size < 380) {
         //printf("%lld\n",seed);
         return 0;
     }
@@ -112,7 +112,7 @@ static void *worker(void *arg) {
             uint64_t match_number = atomic_fetch_add(&reporter->matches, 1) + 1;
             if (match_number <= MAX_MATCHES) {
                 pthread_mutex_lock(&reporter->report_mutex);
-                printf("%" PRIu64 "\n", seed);
+                printf("seed  %" PRIu64 "\n", seed);
                 pthread_mutex_unlock(&reporter->report_mutex);
             }
             if (match_number >= MAX_MATCHES) atomic_store(&reporter->stop, true);
@@ -123,7 +123,7 @@ static void *worker(void *arg) {
             pthread_mutex_lock(&reporter->report_mutex);
             time_t end = time(NULL);
             double seconds = difftime(end, start);
-            printf("seeds scanned %" PRIu64 "  time:  %.0lf\n",checked, seconds);
+            printf("seeds scanned %" PRIu64 "  Matches: %"PRIu64 "  time:  %.0lf\n",checked, atomic_load(&reporter->matches),seconds);
             pthread_mutex_unlock(&reporter->report_mutex);
         }
         if (reporter->end_seed - seed <= THREAD_COUNT) break;
