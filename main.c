@@ -10,10 +10,10 @@
 // gcc main.c crunch.c sb_noise.c cubiomes/libcubiomes.a -O3 -pthread -lm -fwrapv -o test
 
 #define MAX_MATCHES 10000
-#define REPORT_INTERVAL UINT64_C(10000000000)
+#define REPORT_INTERVAL UINT64_C(1000000)
 #define SEED_START UINT64_C(0)
 #define SEED_LIMIT UINT64_C(18446744073709551615)
-#define MIN_SIZE 32766
+#define MIN_SIZE 20000
 #define THREADS 20
 enum { THREAD_COUNT = 20 };
 time_t start;
@@ -112,7 +112,7 @@ static void *worker(void *arg) {
             uint64_t match_number = atomic_fetch_add(&reporter->matches, 1) + 1;
             if (match_number <= MAX_MATCHES) {
                 pthread_mutex_lock(&reporter->report_mutex);
-                printf("seed:  %" PRIu64 "\n", seed);
+                printf("%" PRIu64 "\n", seed);
                 pthread_mutex_unlock(&reporter->report_mutex);
             }
             if (match_number >= MAX_MATCHES) atomic_store(&reporter->stop, true);
@@ -123,7 +123,7 @@ static void *worker(void *arg) {
             pthread_mutex_lock(&reporter->report_mutex);
             time_t end = time(NULL);
             double seconds = difftime(end, start);
-            printf("seeds scanned %" PRIu64 "\n",checked);
+            printf("seeds scanned %" PRIu64 "  time:  %.0lf\n",checked, seconds);
             pthread_mutex_unlock(&reporter->report_mutex);
         }
         if (reporter->end_seed - seed <= THREAD_COUNT) break;
