@@ -61,27 +61,22 @@ int full_valid(sbNoise *noise, int x, int z) {
     return 1;
 }
 
-int pass_seed(uint64_t seed) {
-    sbNoise noise;
-    sb_setseed(&noise, seed, 2);
+int pass_seed(uint64_t seed, sbNoise* noise) {
+    sb_setseed(noise, seed);
     // float crunchiness(sbNoise *noise, int type, int octave_index, char half_octave);
-    float p = crunchiness(&noise, NP_TEMPERATURE, 0, 'A');
+    float p = crunchiness(noise, NP_TEMPERATURE, 0, 'A');
     if (p > 0.4) {
-        free_all(&noise);
         return 0;
     } 
-    float q = crunchiness(&noise, NP_TEMPERATURE, 0, 'B');
+    float q = crunchiness(noise, NP_TEMPERATURE, 0, 'B');
     if (p + q > 0.4) {
-        free_all(&noise);
         return 0;
     }
-    if (p + q + crunchiness(&noise, NP_TEMPERATURE, 1, 'A') + crunchiness(&noise, NP_TEMPERATURE, 0, 'B') > 0.2) {
-        free_all(&noise);
+    if (p + q + crunchiness(noise, NP_TEMPERATURE, 1, 'A') + crunchiness(noise, NP_TEMPERATURE, 1, 'B') > 0.2) {
         return 0;
     }
-    int A_size = floodfill(&noise, good_A, 0, 0, 256, 512);
+    int A_size = floodfill(noise, good_A, 0, 0, 256, 512);
     if (A_size < 340) {
-        free_all(&noise);
         //printf("%lld\n",seed);
         return 0;
     }
@@ -90,16 +85,13 @@ int pass_seed(uint64_t seed) {
     for (int cx = -tile * times; cx <= tile * times; cx += tile){
         for (int cz = -tile * times; cz <= tile * times; cz += tile){
             int x = cx, z = cz;
-            int size = floodfill(&noise, full_valid, x, z, 32, 32768);
+            int size = floodfill(noise, full_valid, x, z, 32, 32768);
             if (size > MIN_SIZE){
                 printf("at %d, %d               ", x, z);
-                free_all(&noise);
                 return size;
             }
         }
     }
-
-    free_all(&noise);
     return 0;
 }
 
@@ -111,14 +103,16 @@ int pass_seed(uint64_t seed) {
 static void *worker(void *arg) {
     Worker *args = arg;
     Reporter *reporter = args->reporter;
+    sbNoise seeds;
+    sb_init(&seeds, 2, 32768);
     for (uint64_t seed = SEED_START + args->thread_index;
          seed < reporter->end_seed && !atomic_load(&reporter->stop);) {
-        int result = pass_seed(seed);
+        int result = pass_seed(seed, &seeds);
         if (result > 0) {
             uint64_t match_number = atomic_fetch_add(&reporter->matches, 1) + 1;
             if (match_number <= MAX_MATCHES) {
                 pthread_mutex_lock(&reporter->report_mutex);
-                printf("%" PRIu64 "\n", seed);
+                printf("seed:  %" PRIu64 "\n", seed);
                 pthread_mutex_unlock(&reporter->report_mutex);
             }
             if (match_number >= MAX_MATCHES) atomic_store(&reporter->stop, true);
@@ -135,6 +129,7 @@ static void *worker(void *arg) {
         if (reporter->end_seed - seed <= THREAD_COUNT) break;
         seed += THREAD_COUNT;
     }
+    free_all(&seeds);
     return NULL;
 }
 
@@ -159,4 +154,3 @@ int main() {
     pthread_mutex_destroy(&reporter.report_mutex);
     return 0;
 }
-
