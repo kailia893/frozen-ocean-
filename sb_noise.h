@@ -17,6 +17,7 @@ typedef struct {
     int capacity;
     int cur;    
     unsigned int generation;
+    int used;
 } hash_table;
 
 typedef struct {
@@ -46,7 +47,7 @@ typedef struct {
 } pos;
 int floodfill(sbNoise *noise, valid is_valid, int x, int z, int step_size, int limit);
 int custom_floodfill(sbNoise *noise, valid is_valid, valid skip, valid stop, int x, int z, int step_size, int limit);
-//limit must be power of 2
+//limit must be power of 2 NO LONGER NEEDED 
 int auto_true(sbNoise *noise, int x, int z);
 int auto_false(sbNoise *noise, int x, int z); // helpers for valid parameters
 
