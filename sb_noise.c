@@ -45,9 +45,11 @@ void init_hash(hash_table *table, int capacity) { // capacity must be power of 2
     table->values = (int*)malloc(capacity * sizeof(int));
     table->hasvalue = (unsigned int*)calloc(capacity, sizeof(unsigned int));
     table->generation = 1;
+    table->used = 0;
 }
 
 void setvalue(hash_table *table, uint64_t key, int value) {
+    table->used = 1;
     if (table->cur + 1 > table->capacity) return;
     uint64_t mask = table->capacity - 1;
     int index = key & mask;
@@ -81,6 +83,7 @@ int getvalue(hash_table *table, uint64_t key) {
 }
 
 void rehash(hash_table *table) {
+    if (!table->used) return;
     if (table->generation == UINT_MAX) {
         memset(table->hasvalue, 0,
             table->capacity * sizeof(*table->hasvalue));
@@ -90,6 +93,7 @@ void rehash(hash_table *table) {
         table->generation++;
     }
     table->cur = 0;
+    table->used = 0;
 }
 
 void free_hash_table(hash_table *table) {
@@ -102,10 +106,11 @@ void free_hash_table(hash_table *table) {
     table->capacity = 0;
     table->cur = 0;
     table->generation = 0;
+    table->used = 0;
 }
 
 static const int octave_counts[6] = {
-    2, 2, 9, 4, 0, 3
+    2, 2, 9, 4, 0, 3 //single octaves
 };
 
 
@@ -114,7 +119,7 @@ void sb_init(sbNoise *noise, int capacity, int floodfill_max) {
     noise->initialized = 0;
     memset(noise->initialized_octaves, 0, sizeof(noise->initialized_octaves));
     init_hash(&noise->hash, capacity);
-    init_hash(&noise->floodfill_hash, floodfill_max);
+    init_hash(&noise->floodfill_hash, floodfill_max * 4);
 }
 
 void sb_setseed(sbNoise *noise, uint64_t seed) {
@@ -230,59 +235,57 @@ int sb_octave_int_sum(sbNoise *noise, int type, int octave_index,
 }
 
 int floodfill(sbNoise *noise, valid is_valid, int x, int z, int step_size, int limit) {
+    hash_table *visited = &noise->floodfill_hash;
+    rehash(visited);
     if (!is_valid(noise, x,z)) return 0;
     pos q[limit];
-    hash_table visited;
-    init_hash(&visited, limit * 4);
     int head = 0, tail = 0;
     int dx[] = {-step_size, step_size, 0, 0};
     int dz[] = {0, 0, -step_size, step_size};
     q[head++] = (pos){x,z};
-    setvalue(&visited, pos_hash((pos){x, z}), 1);
+    setvalue(visited, pos_hash((pos){x, z}), 1);
     while (head > tail) {
         pos cur = q[tail++];
         for (int i = 0; i < 4; i++){
             int cx = dx[i];
             int cz = dz[i];
-            if (getvalue(&visited, pos_hash((pos){cur.x + cx, cur.z + cz})) 
+            if (getvalue(visited, pos_hash((pos){cur.x + cx, cur.z + cz}))
                 != (1 << 30)){
                 continue;
             }
             if (is_valid(noise, cur.x + cx, cur.z + cz)) {
-                if (head >= limit || tail >= limit){ 
-                    free_hash_table(&visited);
+                if (head >= limit || tail >= limit){
                     return limit;
-                }                            
-                setvalue(&visited, pos_hash((pos){cur.x + cx, cur.z + cz}), 1);
+                }
+                setvalue(visited, pos_hash((pos){cur.x + cx, cur.z + cz}), 1);
                 q[head++] = (pos){cur.x + cx, cur.z + cz};
             }
             else {
-                setvalue(&visited, pos_hash((pos){cur.x + cx, cur.z + cz}), 1);
+                setvalue(visited, pos_hash((pos){cur.x + cx, cur.z + cz}), 1);
             }
         }
     }
-    free_hash_table(&visited);
     return head;
 }
 
 int custom_floodfill(sbNoise *noise, valid is_valid, valid skip, valid stop, 
     int x, int z, int step_size, int limit) {
+    hash_table *visited = &noise->floodfill_hash;
+    rehash(visited);
     if (!is_valid(noise, x,z)) return 0;
     pos q[limit];
-    hash_table visited;
-    init_hash(&visited, limit * 8);
     int head = 0, tail = 0;
     int dx[] = {-step_size, step_size, 0, 0};
     int dz[] = {0, 0, -step_size, step_size};
     q[head++] = (pos){x,z};
-    setvalue(&visited, pos_hash((pos){x, z}), 1);
+    setvalue(visited, pos_hash((pos){x, z}), 1);
     int sub = 0;
     while (head > tail) {
         pos cur = q[tail++];
         for (int i = 0; i < 4; i++){
             int cx = dx[i];
             int cz = dz[i];
-            if (getvalue(&visited, pos_hash((pos){cur.x + cx, cur.z + cz})) 
+            if (getvalue(visited, pos_hash((pos){cur.x + cx, cur.z + cz}))
                 != (1 << 30)){
                 continue;
             }
@@ -290,22 +293,20 @@ int custom_floodfill(sbNoise *noise, valid is_valid, valid skip, valid stop,
                 if (skip(noise, cur.x + cx, cur.z + cz)) {
                     sub++;
                 }
-                if (head >= limit || tail >= limit){ 
-                    free_hash_table(&visited);
+                if (head >= limit || tail >= limit){
                     return limit;
-                }                            
-                setvalue(&visited, pos_hash((pos){cur.x + cx, cur.z + cz}), 1);
+                }
+                setvalue(visited, pos_hash((pos){cur.x + cx, cur.z + cz}), 1);
                 q[head++] = (pos){cur.x + cx, cur.z + cz};
             }
             else {
-                setvalue(&visited, pos_hash((pos){cur.x + cx, cur.z + cz}), 1);
+                setvalue(visited, pos_hash((pos){cur.x + cx, cur.z + cz}), 1);
                 if (stop(noise, cur.x + cx, cur.z + cz)) {
                     return 0;
                 }
             }
         }
     }
-    free_hash_table(&visited);
     return head - sub;
 }
 
@@ -319,4 +320,5 @@ int auto_false(sbNoise *noise, int x, int z) {
 
 void free_all(sbNoise *noise) {
     free_hash_table(&noise->hash);
+    free_hash_table(&noise->floodfill_hash);
 }
