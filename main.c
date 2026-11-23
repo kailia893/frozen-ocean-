@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <time.h>
-// gcc main.c sb_noise.c cubiomes/libcubiomes.a -O3 -pthread -lm -fwrapv -o test
+// gcc main.c crunch.c sb_noise.c cubiomes/libcubiomes.a -O3 -pthread -lm -fwrapv -o test
 
 #define MAX_MATCHES 10000
 #define REPORT_INTERVAL UINT64_C(10000000000)
@@ -17,7 +17,6 @@
 #define THREADS 20
 enum { THREAD_COUNT = 20 };
 time_t start;
-
 typedef struct {
     atomic_uint_fast64_t checked;
     atomic_uint_fast64_t matches;
@@ -25,7 +24,6 @@ typedef struct {
     uint64_t end_seed;
     pthread_mutex_t report_mutex;
 } Reporter;
-
 typedef struct {
     Reporter *reporter;
     uint64_t thread_index;
@@ -94,7 +92,7 @@ int pass_seed(uint64_t seed) {
             int x = cx, z = cz;
             int size = floodfill(&noise, full_valid, x, z, 32, 32768);
             if (size > MIN_SIZE){
-                printf("at %d, %d\n", x, z);
+                printf("at %d, %d               ", x, z);
                 free_all(&noise);
                 return size;
             }
@@ -161,5 +159,4 @@ int main() {
     pthread_mutex_destroy(&reporter.report_mutex);
     return 0;
 }
-
 
