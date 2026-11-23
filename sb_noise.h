@@ -1,6 +1,5 @@
 #ifndef SB_NOISE_H
 #define SB_NOISE_H
-
 #include "cubiomes/biomenoise.h"
 
 /*
@@ -14,9 +13,10 @@
 typedef struct {
     uint64_t *keys;
     int *values;
-    int *hasvalue;
+    unsigned int *hasvalue;
     int capacity;
     int cur;    
+    unsigned int generation;
 } hash_table;
 
 typedef struct {
@@ -26,9 +26,11 @@ typedef struct {
     DoublePerlinNoise climate[6];
     PerlinNoise octaves[40];
     hash_table hash;
+    hash_table floodfill_hash;
 } sbNoise;
 
-void sb_setseed(sbNoise *noise, uint64_t seed, int capacity);
+void sb_init(sbNoise *noise, int capacity, int floodfill_max);
+void sb_setseed(sbNoise *noise, uint64_t seed);
 // capacity must be power of 2
 double sb_octave(sbNoise *noise, int type, int octave_index, char half_octave, double x, double z);
 int sb_octave_int(sbNoise *noise, int type, int octave_index, char half_octave, int x,int z);
