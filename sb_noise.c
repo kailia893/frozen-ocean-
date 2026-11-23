@@ -1,8 +1,9 @@
 #include "sb_noise.h"
-
+#include <limits.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 static const int period_a[6] = { // 1 to 4 scaling
     1024 * 256, 256 * 256, 512 * 256, 
@@ -42,19 +43,19 @@ void init_hash(hash_table *table, int capacity) { // capacity must be power of 2
     table->cur = 0;
     table->keys = (uint64_t*)malloc(capacity * sizeof(uint64_t));
     table->values = (int*)malloc(capacity * sizeof(int));
-    table->hasvalue = (int*)calloc(capacity, sizeof(int));
+    table->hasvalue = (unsigned int*)calloc(capacity, sizeof(unsigned int));
+    table->generation = 1;
 }
-
 
 void setvalue(hash_table *table, uint64_t key, int value) {
     if (table->cur + 1 > table->capacity) return;
     uint64_t mask = table->capacity - 1;
     int index = key & mask;
     for (int i = 0; i < table->capacity; i++) {
-        if (!table->hasvalue[index]) {
+        if (table->hasvalue[index] != table->generation) {
             table->keys[index] = key;
             table->values[index] = value;
-            table->hasvalue[index] = 1;
+            table->hasvalue[index] = table->generation;
             table->cur++;
             return;
         }
@@ -67,7 +68,7 @@ int getvalue(hash_table *table, uint64_t key) {
     uint64_t mask = table->capacity - 1;
     int index = key & mask;
     for (int i = 0; i < table->capacity; i++) {
-        if (!table->hasvalue[index]) {
+        if (table->hasvalue[index] != table->generation) {
             return (int)(1<<30);
         }
         if (table->keys[index] == key) {
@@ -79,8 +80,19 @@ int getvalue(hash_table *table, uint64_t key) {
     return (uint64_t)(1<<30);
 }
 
-void free_hash_table(hash_table *table)
-{
+void rehash(hash_table *table) {
+    if (table->generation == UINT_MAX) {
+        memset(table->hasvalue, 0,
+            table->capacity * sizeof(*table->hasvalue));
+        table->generation = 1;
+    }
+    else {
+        table->generation++;
+    }
+    table->cur = 0;
+}
+
+void free_hash_table(hash_table *table) {
     free(table->keys);
     free(table->values);
     free(table->hasvalue);
@@ -89,6 +101,7 @@ void free_hash_table(hash_table *table)
     table->hasvalue = NULL;
     table->capacity = 0;
     table->cur = 0;
+    table->generation = 0;
 }
 
 static const int octave_counts[6] = {
@@ -97,11 +110,19 @@ static const int octave_counts[6] = {
 
 
 
-void sb_setseed(sbNoise *noise, uint64_t seed, int capacity) {
-    noise->seed = seed;
+void sb_init(sbNoise *noise, int capacity, int floodfill_max) {
     noise->initialized = 0;
     memset(noise->initialized_octaves, 0, sizeof(noise->initialized_octaves));
     init_hash(&noise->hash, capacity);
+    init_hash(&noise->floodfill_hash, floodfill_max);
+}
+
+void sb_setseed(sbNoise *noise, uint64_t seed) {
+    noise->seed = seed;
+    noise->initialized = 0;
+    memset(noise->initialized_octaves, 0, sizeof(noise->initialized_octaves));
+    rehash(&noise->hash);
+    rehash(&noise->floodfill_hash);
 }
 
 static void init_parameter(sbNoise *noise, int type, int octaves) {
@@ -142,8 +163,6 @@ static inline void part(const DoublePerlinNoise *d, int octave_index,
         s = &d->octB;
         mult = 337.0 / 331.0;
     }
-    else abort();
-    if (octave_index < 0 || octave_index >= s->octcnt) abort();
     q = s->octaves + octave_index;
     *value = d->amplitude * q->amplitude * samplePerlin(q,
         x * mult * q->lacunarity, 0, z * mult * q->lacunarity, 0, 0);
@@ -251,7 +270,7 @@ int custom_floodfill(sbNoise *noise, valid is_valid, valid skip, valid stop,
     if (!is_valid(noise, x,z)) return 0;
     pos q[limit];
     hash_table visited;
-    init_hash(&visited, limit * 4);
+    init_hash(&visited, limit * 8);
     int head = 0, tail = 0;
     int dx[] = {-step_size, step_size, 0, 0};
     int dz[] = {0, 0, -step_size, step_size};
