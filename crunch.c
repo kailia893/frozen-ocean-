@@ -12,7 +12,6 @@ typedef struct {
 } CrunchConfig;
 typedef struct { uint64_t lo; uint64_t hi; } SeedPair;
 
-// Large-biome climate salts and octave ranges from xpple/cubiomes.
 static const CrunchConfig crunch_configs[NP_MAX] = {
   [NP_TEMPERATURE] = {0x944b0073edf549dbULL, 0x4ff44347e9d22b96ULL, -12, 3, 6, {1.5f, 0.0f, 1.0f}},
   [NP_HUMIDITY] = {0x71b8ab943dbd5301ULL, 0xbb63ddcf39ff7a2bULL, -10, 2, 6, {1.0f, 1.0f}},
@@ -21,7 +20,6 @@ static const CrunchConfig crunch_configs[NP_MAX] = {
   [NP_WEIRDNESS] = {0xefc8ef4d36102b34ULL, 0x1beeeb324a0f24eaULL, -7, 3, 6, {1.0f, 2.0f, 1.0f}}
 };
 
-// Cubiomes uses the same octave_-16..octave_0 salts for small and large biomes.
 static const SeedPair octave_salts[17] = {
   {0xc613bf766619f992ULL, 0x954753f86691b86aULL}, {0x7eee475a921c6cf5ULL, 0xf2bd39426f8da413ULL},
   {0xfc0027cef9683114ULL, 0xb758d3954dcbfdd3ULL}, {0xd1fc8a05be565ecaULL, 0xdc2a3915cbdda25bULL},
@@ -105,6 +103,5 @@ float crunchiness(lbNoise *noise, int type, int octave_index, char half_octave) 
   SeedPair base = half_base_seed(noise, type, config, half_octave);
   uint32_t offset24 = octave_offset24(base.lo, base.hi, salt_index);
   float centered_offset = (float)offset24 * (1.0f / 16777216.0f) - 0.5f;
-  // Preserve the sign; equal-weight sums of centered offsets can cancel.
   return centered_offset * base_cache.octave_weights[octave_index];
 }
