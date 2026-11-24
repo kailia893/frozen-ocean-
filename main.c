@@ -10,12 +10,12 @@
 // gcc main.c crunch.c sb_noise.c cubiomes/libcubiomes.a -O3 -pthread -lm -fwrapv -o test
 
 #define MAX_MATCHES 10000
-#define REPORT_INTERVAL UINT64_C(100000000)
-#define SEED_START UINT64_C(6767676767677676)
+#define REPORT_INTERVAL UINT64_C(1000000000)
+#define SEED_START UINT64_C(0)
 #define SEED_LIMIT UINT64_C(10000000000000000)
-#define MIN_SIZE 30000
-#define THREADS 8
-enum { THREAD_COUNT = 8 };
+#define MIN_SIZE 32000
+#define THREADS 20
+enum { THREAD_COUNT = 20 };
 time_t start;
 typedef struct {
     atomic_uint_fast64_t checked;
