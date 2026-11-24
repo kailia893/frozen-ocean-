@@ -65,7 +65,7 @@ int pass_seed(uint64_t seed, lbNoise *noise) {
     if (A_size < 380) return 0;
 
     const int tile = 4194304;
-    const int times = 7; // floor(30,000,000 / tile): maximum safe tiling radius
+    const int times = 7;
     for (int cx = -tile * times; cx <= tile * times; cx += tile) {
         for (int cz = -tile * times; cz <= tile * times; cz += tile) {
             int size = floodfill(noise, full_valid, cx, cz, 128, 32768);
