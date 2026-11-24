@@ -37,5 +37,5 @@ int floodfill(lbNoise *noise, valid is_valid, int x, int z, int step_size, int l
 int custom_floodfill(lbNoise *noise, valid is_valid, valid skip, valid stop, int x, int z, int step_size, int limit);
 int auto_true(lbNoise *noise, int x, int z);
 int auto_false(lbNoise *noise, int x, int z);
-
+// helpers
 #endif
