@@ -5,7 +5,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-// Periods in the sampler's x/z coordinates (world coordinates divided by 4).
 static const int period_a[6] = {
     4096 * 256, 1024 * 256, 2048 * 256,
     2048 * 256, 0, 128 * 256
@@ -100,7 +99,6 @@ static void init_parameter(lbNoise *noise, int type, int octaves) {
     BiomeNoise b = {0};
     int offset = 0;
     for (int i = NP_TEMPERATURE; i < type; i++) offset += 2 * octave_counts[i];
-    // large=1 selects Cubiomes' large-biome salts and octave ranges.
     setClimateParaSeed(&b, noise->seed, 1, type, 2 * octaves);
     DoublePerlinNoise *d = &b.climate[type];
     int count = d->octA.octcnt + d->octB.octcnt;
