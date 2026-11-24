@@ -103,5 +103,5 @@ float crunchiness(lbNoise *noise, int type, int octave_index, char half_octave) 
   SeedPair base = half_base_seed(noise, type, config, half_octave);
   uint32_t offset24 = octave_offset24(base.lo, base.hi, salt_index);
   float centered_offset = (float)offset24 * (1.0f / 16777216.0f) - 0.5f;
-  return centered_offset * base_cache.octave_weights[octave_index];
+  return centered_offset;
 }
