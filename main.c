@@ -10,10 +10,10 @@
 // gcc main.c crunch.c sb_noise.c cubiomes/libcubiomes.a -O3 -pthread -lm -fwrapv -o test
 
 #define MAX_MATCHES 10000
-#define REPORT_INTERVAL UINT64_C(1000000000)
-#define SEED_START UINT64_C(0)
-#define SEED_LIMIT UINT64_C(10000000000000000)
-#define MIN_SIZE 32000
+#define REPORT_INTERVAL UINT64_C(100000000000)
+#define SEED_START UINT64_C(1555000000000000000)
+#define SEED_LIMIT UINT64_C(100000000000000000)
+#define MIN_SIZE 30517
 #define THREADS 20
 enum { THREAD_COUNT = 20 };
 time_t start;
