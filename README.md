@@ -1,4 +1,4 @@
-Download, unzip, then run make, then run ./run. Simple as that, blueelephant better not mess this up
+Download, unzip, then run make, then run ./run.
 
 
 
